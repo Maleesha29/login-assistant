@@ -42,9 +42,13 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-3">
           {stats && (
             <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-dark-850/80 border border-dark-700 text-xs">
-              <div className={'w-2 h-2 rounded-full ' + (stats.isMockData ? 'bg-accent-amber animate-pulse' : 'bg-accent-emerald')} />
+              <div className={'w-2 h-2 rounded-full ' + (stats.configured ? 'bg-accent-emerald' : 'bg-rose-500')} />
               <span className="text-slate-300 font-medium">
-                {stats.isMockData ? 'Mock Sheet Mode' : 'Google Sheet Connected'}
+                {stats.sheets && stats.sheets.length > 1
+                  ? `${stats.sheets.length} Sheets Connected`
+                  : stats.configured
+                  ? 'Google Sheet Connected'
+                  : 'No Sheet Connected'}
               </span>
               <span className="text-slate-500">|</span>
               <span className="text-slate-400">

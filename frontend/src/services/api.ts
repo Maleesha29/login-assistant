@@ -16,8 +16,12 @@ export async function searchAccounts(query: string): Promise<SearchSuggestion[]>
   return data.results || [];
 }
 
-export async function getAccountDetails(company: string, game: string): Promise<AccountPreview> {
-  const res = await fetch(API_BASE + '/account?company=' + encodeURIComponent(company) + '&game=' + encodeURIComponent(game));
+export async function getAccountDetails(company: string, game: string, sheetSource?: string): Promise<AccountPreview> {
+  let url = API_BASE + '/account?company=' + encodeURIComponent(company) + '&game=' + encodeURIComponent(game);
+  if (sheetSource) {
+    url += '&sheetSource=' + encodeURIComponent(sheetSource);
+  }
+  const res = await fetch(url);
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.error || 'Account not found');
@@ -26,11 +30,22 @@ export async function getAccountDetails(company: string, game: string): Promise<
   return data.account;
 }
 
-export async function refreshSheetData(sheetUrl?: string): Promise<{ success: boolean; message: string; stats: BackendStats }> {
+export interface MultiSheetRefreshParams {
+  sheet1Url?: string;
+  sheet1Name?: string;
+  sheet2Url?: string;
+  sheet2Name?: string;
+  sheetUrl?: string;
+}
+
+export async function refreshSheetData(
+  params?: MultiSheetRefreshParams | string
+): Promise<{ success: boolean; message: string; stats: BackendStats }> {
+  const body = typeof params === 'string' ? { sheetUrl: params } : (params || {});
   const res = await fetch(API_BASE + '/data/refresh', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheetUrl })
+    body: JSON.stringify(body)
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
@@ -57,7 +72,7 @@ export async function triggerLoginAutomation(
   company: string,
   game: string,
   onProgress: (event: AutomationProgressEvent) => void,
-  options?: { keepBrowserOpen?: boolean; headless?: boolean }
+  options?: { keepBrowserOpen?: boolean; headless?: boolean; sheetSource?: string }
 ): Promise<void> {
   const res = await fetch(API_BASE + '/login', {
     method: 'POST',
@@ -68,6 +83,7 @@ export async function triggerLoginAutomation(
     body: JSON.stringify({
       company,
       game,
+      sheetSource: options?.sheetSource,
       keepBrowserOpen: options?.keepBrowserOpen ?? true,
       headless: options?.headless ?? false
     })

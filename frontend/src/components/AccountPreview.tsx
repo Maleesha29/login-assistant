@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ExternalLink, Play, Eye, EyeOff, Star } from 'lucide-react';
+import { ExternalLink, Play, Eye, EyeOff, Star, FileSpreadsheet } from 'lucide-react';
 import { AccountPreview as AccountPreviewType } from '../types';
 
 interface AccountPreviewProps {
@@ -23,13 +23,19 @@ export const AccountPreview: React.FC<AccountPreviewProps> = ({
     <div className="w-full glass-panel rounded-2xl p-6 shadow-2xl border border-dark-700/80 relative overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-dark-700/60">
         <div>
-          <div className="flex items-center space-x-3 mb-1.5">
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
             <span className="px-2.5 py-1 text-xs font-extrabold uppercase tracking-wider rounded-md bg-brand-500/20 text-brand-400 border border-brand-500/30">
               COMPANY: {account.company}
             </span>
             <span className="px-2.5 py-1 text-xs font-extrabold uppercase tracking-wider rounded-md bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30">
               GAME: {account.game}
             </span>
+            {account.sheetSource && (
+              <span className="px-2.5 py-1 text-xs font-extrabold uppercase tracking-wider rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                SHEET: {account.sheetSource}
+              </span>
+            )}
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
             {account.company} <span className="text-slate-500 font-light">/</span> {account.game}

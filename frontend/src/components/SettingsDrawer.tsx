@@ -8,7 +8,7 @@ interface SettingsDrawerProps {
   stats: BackendStats | null;
   keepBrowserOpen: boolean;
   onToggleKeepBrowserOpen: (val: boolean) => void;
-  onRefreshData: (sheetUrl?: string) => void;
+  onRefreshData: (params?: { sheet1Url?: string; sheet1Name?: string; sheet2Url?: string; sheet2Name?: string }) => void;
   isRefreshing: boolean;
 }
 
@@ -21,17 +21,21 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   onRefreshData,
   isRefreshing
 }) => {
-  const [sheetInput, setSheetInput] = useState<string>('');
+  const [sheet1Url, setSheet1Url] = useState<string>('');
+  const [sheet1Name, setSheet1Name] = useState<string>('Sheet 1');
+  const [sheet2Url, setSheet2Url] = useState<string>('');
+  const [sheet2Name, setSheet2Name] = useState<string>('Sheet 2');
 
   if (!isOpen) return null;
 
-  const handleConnectSheet = (e: React.FormEvent) => {
+  const handleConnectSheets = (e: React.FormEvent) => {
     e.preventDefault();
-    if (sheetInput.trim()) {
-      onRefreshData(sheetInput.trim());
-    } else {
-      onRefreshData();
-    }
+    onRefreshData({
+      sheet1Url: sheet1Url.trim(),
+      sheet1Name: sheet1Name.trim() || 'Sheet 1',
+      sheet2Url: sheet2Url.trim(),
+      sheet2Name: sheet2Name.trim() || 'Sheet 2'
+    });
   };
 
   return (
@@ -53,32 +57,67 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
         {/* Settings Sections */}
         <div className="py-6 space-y-6 flex-1">
-          {/* Direct Google Sheet Link (Zero GCP) */}
+          {/* Multi Google Sheet Links (Zero GCP) */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
               <Link2 className="w-4 h-4 text-emerald-400" />
-              Connect Google Spreadsheet (Zero Cloud Setup)
+              Connect 2 Google Spreadsheets (Zero Cloud)
             </h3>
 
-            <form onSubmit={handleConnectSheet} className="p-4 rounded-xl bg-dark-850 border border-dark-700/80 space-y-3">
-              <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">
-                  Google Sheet URL or Spreadsheet ID
-                </label>
+            <form onSubmit={handleConnectSheets} className="p-4 rounded-xl bg-dark-850 border border-dark-700/80 space-y-4">
+              {/* Sheet 1 */}
+              <div className="space-y-2 p-3 rounded-lg bg-dark-900/80 border border-dark-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    Google Sheet 1
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Name (e.g. Sheet 1)"
+                    value={sheet1Name}
+                    onChange={(e) => setSheet1Name(e.target.value)}
+                    className="w-28 px-2 py-1 text-[11px] rounded bg-dark-950 border border-dark-700 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-brand-500"
+                  />
+                </div>
                 <input
                   type="text"
                   placeholder="https://docs.google.com/spreadsheets/d/.../edit"
-                  value={sheetInput}
-                  onChange={(e) => setSheetInput(e.target.value)}
+                  value={sheet1Url}
+                  onChange={(e) => setSheet1Url(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-lg bg-dark-950 border border-dark-700 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-500"
+                />
+              </div>
+
+              {/* Sheet 2 */}
+              <div className="space-y-2 p-3 rounded-lg bg-dark-900/80 border border-dark-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    Google Sheet 2 (Optional)
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Name (e.g. Sheet 2)"
+                    value={sheet2Name}
+                    onChange={(e) => setSheet2Name(e.target.value)}
+                    className="w-28 px-2 py-1 text-[11px] rounded bg-dark-950 border border-dark-700 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <input
+                  type="text"
+                  placeholder="https://docs.google.com/spreadsheets/d/.../edit"
+                  value={sheet2Url}
+                  onChange={(e) => setSheet2Url(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-lg bg-dark-950 border border-dark-700 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-500"
                 />
               </div>
 
               <div className="text-[11px] text-slate-400 bg-dark-900/90 p-2.5 rounded-lg border border-dark-800 space-y-1">
                 <div className="font-semibold text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> No Google Cloud required!
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Zero Cloud Setup
                 </div>
-                <div>In Google Sheets: Click <strong>Share</strong> → change to <strong>"Anyone with the link can view"</strong>, then paste the link above and click sync.</div>
+                <div>In Google Sheets: Click <strong>Share</strong> → set to <strong>"Anyone with the link can view"</strong>, then paste the link(s) above.</div>
               </div>
 
               <button
@@ -87,7 +126,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-bold text-white transition shadow-md shadow-emerald-900/30"
               >
                 <RefreshCw className={'w-3.5 h-3.5 ' + (isRefreshing ? 'animate-spin' : '')} />
-                <span>{isRefreshing ? 'Syncing Spreadsheet...' : 'Sync & Load Google Sheet'}</span>
+                <span>{isRefreshing ? 'Syncing Spreadsheets...' : 'Sync & Load Google Sheets'}</span>
               </button>
             </form>
           </div>
@@ -99,24 +138,47 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               Spreadsheet Status
             </h3>
 
-            <div className="p-4 rounded-xl bg-dark-850 border border-dark-700/80 space-y-2.5 text-xs">
+            <div className="p-4 rounded-xl bg-dark-850 border border-dark-700/80 space-y-3 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Mode:</span>
+                <span className="text-slate-400">Connection Status:</span>
                 <span className={'font-bold px-2 py-0.5 rounded ' + (
-                  stats?.isMockData ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
+                  stats?.configured ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
                 )}>
-                  {stats?.isMockData ? 'Mock Offline Dataset' : 'Live Google Sheet'}
+                  {stats?.configured ? 'Connected' : 'Not Connected'}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Spreadsheet Name:</span>
-                <span className="text-slate-200 font-medium truncate max-w-[180px]">
-                  {stats?.spreadsheetTitle || 'N/A'}
-                </span>
-              </div>
+              {stats?.sheets && stats.sheets.length > 0 ? (
+                <div className="space-y-2 pt-1 border-t border-dark-800">
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Configured Sheets ({stats.sheets.length})
+                  </div>
+                  {stats.sheets.map((sheet, sIdx) => (
+                    <div
+                      key={sheet.name + '_' + sIdx}
+                      className="p-2.5 rounded-lg bg-dark-900/90 border border-dark-800 flex items-center justify-between"
+                    >
+                      <div className="flex items-center space-x-2 truncate pr-2">
+                        <span className={'w-2 h-2 rounded-full ' + (sIdx === 0 ? 'bg-emerald-400' : 'bg-purple-400')} />
+                        <span className="font-bold text-slate-200 truncate">{sheet.name}</span>
+                      </div>
+                      <span className="text-[11px] text-slate-400 shrink-0">
+                        <strong className="text-slate-200">{sheet.totalCompanies}</strong> tabs •{' '}
+                        <strong className="text-slate-200">{sheet.totalAccounts}</strong> accounts
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Spreadsheet Name:</span>
+                  <span className="text-slate-200 font-medium truncate max-w-[180px]">
+                    {stats?.spreadsheetTitle || 'N/A'}
+                  </span>
+                </div>
+              )}
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pt-2 border-t border-dark-800">
                 <span className="text-slate-400">Total Indexed Companies (Tabs):</span>
                 <span className="text-slate-200 font-bold">{stats?.totalCompanies || 0}</span>
               </div>

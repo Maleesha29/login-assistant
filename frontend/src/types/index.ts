@@ -1,3 +1,10 @@
+export interface SheetSummary {
+  name: string;
+  idOrUrl?: string;
+  totalCompanies: number;
+  totalAccounts: number;
+}
+
 export interface SearchSuggestion {
   company: string;
   game: string;
@@ -5,6 +12,7 @@ export interface SearchSuggestion {
   username: string;
   label: string;
   score: number;
+  sheetSource?: string;
 }
 
 export interface AccountPreview {
@@ -14,6 +22,7 @@ export interface AccountPreview {
   username: string;
   hasPassword: boolean;
   password?: string;
+  sheetSource?: string;
 }
 
 export type AutomationStep =
@@ -46,6 +55,7 @@ export interface BackendStats {
   isMockData: boolean;
   spreadsheetTitle: string;
   configured: boolean;
+  sheets?: SheetSummary[];
 }
 
 export interface SavedItem {
@@ -53,4 +63,5 @@ export interface SavedItem {
   company: string;
   game: string;
   timestamp: number;
+  sheetSource?: string;
 }

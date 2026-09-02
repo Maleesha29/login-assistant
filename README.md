@@ -71,17 +71,22 @@ npm run dev
 
 ---
 
-## 🔗 Connecting Your Google Spreadsheet (Zero Cloud Required)
+## 🔗 Connecting Your Google Spreadsheets (Supports 2 Sheets, Zero Cloud)
 
-1. Open your Google Spreadsheet in your browser.
+1. Open your Google Spreadsheet(s) in your browser.
 2. Click **Share** (top right) → Change General access to **"Anyone with the link can view"**.
 3. Copy the spreadsheet URL or ID.
 4. You can either:
-   - **Method A (Direct in UI)**: Open `http://localhost:5173`, click the **Settings** slider icon (top right), paste your link, and click **"Sync & Load Google Sheet"**.
+   - **Method A (Direct in UI)**: Open `http://localhost:5173`, click the **Settings** slider icon (top right), paste your links for **Sheet 1** and **Sheet 2** (with optional custom names), and click **"Sync & Load Google Sheets"**.
    - **Method B (via .env)**: Create a `.env` file in the project root with:
      ```env
-     GOOGLE_SHEET_ID=https://docs.google.com/spreadsheets/d/your_sheet_id/edit
+     GOOGLE_SHEET_ID_1=https://docs.google.com/spreadsheets/d/your_first_sheet_id/edit
+     GOOGLE_SHEET_NAME_1=Primary Accounts
+
+     GOOGLE_SHEET_ID_2=https://docs.google.com/spreadsheets/d/your_second_sheet_id/edit
+     GOOGLE_SHEET_NAME_2=Secondary Accounts
      ```
+     *(Legacy single `GOOGLE_SHEET_ID` is also still supported)*
 
 ---
 

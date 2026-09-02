@@ -9,6 +9,7 @@ interface AutomationStatusModalProps {
   history: AutomationProgressEvent[];
   company: string;
   game: string;
+  sheetSource?: string;
 }
 
 const STEP_DEFINITIONS: Array<{ key: AutomationStep; label: string }> = [
@@ -29,7 +30,8 @@ export const AutomationStatusModal: React.FC<AutomationStatusModalProps> = ({
   currentEvent,
   history,
   company,
-  game
+  game,
+  sheetSource
 }) => {
   if (!isOpen) return null;
 
@@ -61,8 +63,13 @@ export const AutomationStatusModal: React.FC<AutomationStatusModalProps> = ({
               <h3 className="text-base font-bold text-white">
                 {isError ? 'Login Failed' : isDone ? 'Login Successful' : 'Automating Login...'}
               </h3>
-              <p className="text-xs text-slate-400 font-medium">
-                {company} <span className="text-slate-600">/</span> {game}
+              <p className="text-xs text-slate-400 font-medium flex items-center gap-2">
+                <span>{company} <span className="text-slate-600">/</span> {game}</span>
+                {sheetSource && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    {sheetSource}
+                  </span>
+                )}
               </p>
             </div>
           </div>

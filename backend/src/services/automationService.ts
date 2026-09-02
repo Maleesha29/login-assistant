@@ -10,7 +10,7 @@ export class AutomationService {
     companyQuery: string,
     gameQuery: string,
     onProgress: ProgressCallback,
-    options?: { keepBrowserOpen?: boolean; headless?: boolean }
+    options?: { keepBrowserOpen?: boolean; headless?: boolean; sheetSource?: string }
   ): Promise<AccountRecord> {
     const emit = (step: AutomationProgressEvent['step'], message: string, percent: number, error?: string) => {
       onProgress({
@@ -22,19 +22,20 @@ export class AutomationService {
       });
     };
 
-    emit('INIT', 'Searching for company and game in Google Sheets data...', 5);
+    const sheetLabel = options?.sheetSource ? ` in ${options.sheetSource}` : '';
+    emit('INIT', `Searching for company and game in Google Sheets data${sheetLabel}...`, 5);
 
-    emit('FINDING_COMPANY', 'Looking up company "' + companyQuery + '"...', 10);
-    emit('FINDING_GAME', 'Looking up game "' + gameQuery + '"...', 15);
+    emit('FINDING_COMPANY', `Looking up company "${companyQuery}"${sheetLabel}...`, 10);
+    emit('FINDING_GAME', `Looking up game "${gameQuery}"${sheetLabel}...`, 15);
 
-    let account = this.dataCache.getExactAccount(companyQuery, gameQuery);
+    let account = this.dataCache.getExactAccount(companyQuery, gameQuery, options?.sheetSource);
 
     if (!account) {
       account = this.dataCache.parseAndFindAccount(companyQuery + ' ' + gameQuery);
     }
 
     if (!account) {
-      const err = 'Could not find account for Company "' + companyQuery + '" and Game "' + gameQuery + '".';
+      const err = 'Could not find account for Company "' + companyQuery + '" and Game "' + gameQuery + '"' + sheetLabel + '.';
       emit('ERROR', err, 100, err);
       throw new Error(err);
     }
@@ -45,7 +46,8 @@ export class AutomationService {
       throw new Error(err);
     }
 
-    emit('ACCOUNT_FOUND', 'Found account: ' + account.company + ' / ' + account.game + ' (' + account.url + ')', 20);
+    const originText = account.sheetSource ? ` [${account.sheetSource}]` : '';
+    emit('ACCOUNT_FOUND', `Found account${originText}: ${account.company} / ${account.game} (${account.url})`, 20);
 
     emit('LAUNCHING_BROWSER', 'Launching Chromium browser...', 25);
     const { page } = await browserManager.getPage({

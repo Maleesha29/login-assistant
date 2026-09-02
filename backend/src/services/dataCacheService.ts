@@ -1,4 +1,4 @@
-import { GoogleSheetsClient } from '../googleSheets/sheetsClient';
+import { GoogleSheetsClient, MultiSheetRefreshPayload } from '../googleSheets/sheetsClient';
 import { SheetIndex, AccountRecord, SearchSuggestion, AccountPreviewResponse } from '../types';
 import { normalizeKey } from '../googleSheets/sheetParser';
 
@@ -15,14 +15,14 @@ export class DataCacheService {
     await this.refresh();
   }
 
-  public async refresh(sheetOverride?: string): Promise<SheetIndex> {
-    if (this.isRefreshing && this.cache && !sheetOverride) {
+  public async refresh(payload?: MultiSheetRefreshPayload | string): Promise<SheetIndex> {
+    if (this.isRefreshing && this.cache && !payload) {
       return this.cache;
     }
 
     this.isRefreshing = true;
     try {
-      this.cache = await this.sheetsClient.fetchSpreadsheetData(sheetOverride);
+      this.cache = await this.sheetsClient.fetchSpreadsheetData(payload);
       return this.cache;
     } catch (err: any) {
       throw err;
@@ -47,7 +47,8 @@ export class DataCacheService {
         lastUpdated: null,
         isMockData: false,
         spreadsheetTitle: 'Not configured',
-        configured: this.sheetsClient.isConfigured()
+        configured: this.sheetsClient.isConfigured(),
+        sheets: []
       };
     }
     return {
@@ -57,7 +58,8 @@ export class DataCacheService {
       lastUpdated: this.cache.lastUpdated,
       isMockData: this.cache.isMockData,
       spreadsheetTitle: this.cache.spreadsheetTitle,
-      configured: this.sheetsClient.isConfigured()
+      configured: this.sheetsClient.isConfigured(),
+      sheets: this.cache.sheets || []
     };
   }
 
@@ -88,7 +90,7 @@ export class DataCacheService {
           score = 70;
         } else if (tokens.length > 1) {
           const allMatch = tokens.every(
-            (token) => compNorm.includes(token) || gameNorm.includes(token)
+            (token) => compNorm.includes(token) || gameNorm.includes(token) || (record.sheetSource && record.sheetSource.toLowerCase().includes(token))
           );
           if (allMatch) {
             if (compNorm.startsWith(tokens[0]) && gameNorm.startsWith(tokens[1])) {
@@ -114,7 +116,8 @@ export class DataCacheService {
             url: record.url,
             username: record.username,
             label,
-            score
+            score,
+            sheetSource: record.sheetSource
           });
         }
       }
@@ -155,19 +158,40 @@ export class DataCacheService {
     return null;
   }
 
-  public getExactAccount(company: string, game: string): AccountRecord | null {
+  public getExactAccount(company: string, game: string, sheetSource?: string): AccountRecord | null {
     if (!this.cache) return null;
     const compNorm = normalizeKey(company);
     const gameNorm = normalizeKey(game);
 
+    if (sheetSource) {
+      const match = this.cache.allAccounts.find(
+        (a) => normalizeKey(a.company) === compNorm && normalizeKey(a.game) === gameNorm && a.sheetSource === sheetSource
+      );
+      if (match) return match;
+    }
+
     const compData = this.cache.companies.get(compNorm);
     if (!compData) return null;
 
-    return compData.games.get(gameNorm) || null;
+    const direct = compData.games.get(gameNorm);
+    if (direct && (!sheetSource || direct.sheetSource === sheetSource)) {
+      return direct;
+    }
+
+    // Check disambiguated keys (e.g. "JILI (Sheet 2)")
+    for (const [k, rec] of compData.games.entries()) {
+      if (k.startsWith(gameNorm)) {
+        if (!sheetSource || rec.sheetSource === sheetSource) {
+          return rec;
+        }
+      }
+    }
+
+    return direct || null;
   }
 
-  public getAccountPreview(company: string, game: string): AccountPreviewResponse | null {
-    const acc = this.getExactAccount(company, game);
+  public getAccountPreview(company: string, game: string, sheetSource?: string): AccountPreviewResponse | null {
+    const acc = this.getExactAccount(company, game, sheetSource);
     if (!acc) return null;
 
     return {
@@ -176,7 +200,8 @@ export class DataCacheService {
       url: acc.url,
       username: acc.username,
       hasPassword: Boolean(acc.password),
-      password: acc.password
+      password: acc.password,
+      sheetSource: acc.sheetSource
     };
   }
 

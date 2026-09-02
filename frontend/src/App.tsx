@@ -86,13 +86,15 @@ export function App() {
       const parts = trimmed.split(/\s+/);
       let company = parts[0];
       let game = parts.slice(1).join(' ');
+      let sheetSource: string | undefined = undefined;
 
       if (!game && suggestions.length > 0) {
         company = suggestions[0].company;
         game = suggestions[0].game;
+        sheetSource = suggestions[0].sheetSource;
       }
 
-      const account = await getAccountDetails(company, game);
+      const account = await getAccountDetails(company, game, sheetSource);
       setSelectedAccount(account);
       setSuggestions([]);
       startLoginForAccount(account);
@@ -109,7 +111,7 @@ export function App() {
     try {
       setQuery(suggestion.company + ' ' + suggestion.game);
       setSuggestions([]);
-      const account = await getAccountDetails(suggestion.company, suggestion.game);
+      const account = await getAccountDetails(suggestion.company, suggestion.game, suggestion.sheetSource);
       setSelectedAccount(account);
       startLoginForAccount(account);
     } catch (err: any) {
@@ -117,11 +119,11 @@ export function App() {
     }
   };
 
-  const handleSelectSaved = async (company: string, game: string) => {
+  const handleSelectSaved = async (company: string, game: string, sheetSource?: string) => {
     try {
       setQuery(company + ' ' + game);
       setSuggestions([]);
-      const account = await getAccountDetails(company, game);
+      const account = await getAccountDetails(company, game, sheetSource);
       setSelectedAccount(account);
       startLoginForAccount(account);
     } catch (err: any) {
@@ -133,9 +135,10 @@ export function App() {
     setIsAutomating(true);
     setIsModalOpen(true);
     setEventHistory([]);
+    const sheetPrefix = account.sheetSource ? ` [${account.sheetSource}]` : '';
     setCurrentEvent({
       step: 'INIT',
-      message: 'Initializing login for ' + account.company + ' / ' + account.game + '...',
+      message: `Initializing login for ${account.company} / ${account.game}${sheetPrefix}...`,
       progressPercent: 5,
       timestamp: new Date().toISOString()
     });
@@ -150,7 +153,7 @@ export function App() {
           setCurrentEvent(event);
           setEventHistory((prev) => [...prev, event]);
         },
-        { keepBrowserOpen }
+        { keepBrowserOpen, sheetSource: account.sheetSource }
       );
     } catch (err: any) {
       console.error('Automation error:', err);
@@ -159,10 +162,10 @@ export function App() {
     }
   };
 
-  const handleManualRefresh = async (sheetUrl?: string) => {
+  const handleManualRefresh = async (params?: any) => {
     setIsRefreshing(true);
     try {
-      const res = await refreshSheetData(sheetUrl);
+      const res = await refreshSheetData(params);
       setStats(res.stats);
     } catch (e: any) {
       alert(e.message || 'Failed to refresh Google Sheet data');
@@ -243,6 +246,7 @@ export function App() {
         history={eventHistory}
         company={selectedAccount?.company || ''}
         game={selectedAccount?.game || ''}
+        sheetSource={selectedAccount?.sheetSource}
       />
 
       <SettingsDrawer
@@ -251,14 +255,14 @@ export function App() {
         stats={stats}
         keepBrowserOpen={keepBrowserOpen}
         onToggleKeepBrowserOpen={setKeepBrowserOpen}
-        onRefreshData={(url) => handleManualRefresh(url)}
+        onRefreshData={(params) => handleManualRefresh(params)}
         isRefreshing={isRefreshing}
       />
 
       <SheetDataBrowser
         isOpen={isBrowserOpen}
         onClose={() => setIsBrowserOpen(false)}
-        onSelectAccount={(comp, gm) => handleSelectSaved(comp, gm)}
+        onSelectAccount={(comp, gm, sheet) => handleSelectSaved(comp, gm, sheet)}
       />
     </div>
   );

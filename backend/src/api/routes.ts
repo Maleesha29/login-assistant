@@ -40,8 +40,9 @@ export function createRouter(dataCache: DataCacheService, automationService: Aut
     try {
       const company = typeof req.query.company === 'string' ? req.query.company : '';
       const game = typeof req.query.game === 'string' ? req.query.game : '';
+      const sheetSource = typeof req.query.sheetSource === 'string' ? req.query.sheetSource : undefined;
 
-      let account = dataCache.getAccountPreview(company, game);
+      let account = dataCache.getAccountPreview(company, game, sheetSource);
       if (!account && (company || game)) {
         const found = dataCache.parseAndFindAccount(company + ' ' + game);
         if (found) {
@@ -51,7 +52,8 @@ export function createRouter(dataCache: DataCacheService, automationService: Aut
             url: found.url,
             username: found.username,
             hasPassword: Boolean(found.password),
-            password: found.password
+            password: found.password,
+            sheetSource: found.sheetSource
           };
         }
       }
@@ -87,7 +89,8 @@ export function createRouter(dataCache: DataCacheService, automationService: Aut
         game: g.game,
         url: g.url,
         username: g.username,
-        hasPassword: Boolean(g.password)
+        hasPassword: Boolean(g.password),
+        sheetSource: g.sheetSource
       }));
       res.json({ success: true, company, games });
     } catch (err: any) {
@@ -95,11 +98,11 @@ export function createRouter(dataCache: DataCacheService, automationService: Aut
     }
   });
 
-  // POST /api/data/refresh - Reload Google Sheets (accepts optional { sheetUrl: "..." })
+  // POST /api/data/refresh - Reload Google Sheets (accepts multi-sheet or single-sheet payload)
   router.post('/data/refresh', async (req: Request, res: Response) => {
     try {
-      const { sheetUrl } = req.body || {};
-      await dataCache.refresh(sheetUrl);
+      const { sheetUrl, sheet1Url, sheet1Name, sheet2Url, sheet2Name } = req.body || {};
+      await dataCache.refresh({ sheetUrl, sheet1Url, sheet1Name, sheet2Url, sheet2Name });
       res.json({
         success: true,
         message: 'Google Sheets cache reloaded successfully.',
@@ -126,7 +129,7 @@ export function createRouter(dataCache: DataCacheService, automationService: Aut
   });
 
   router.post('/login', async (req: Request, res: Response) => {
-    const { company = '', game = '', keepBrowserOpen = true, headless = false } = req.body;
+    const { company = '', game = '', sheetSource = '', keepBrowserOpen = true, headless = false } = req.body;
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -142,7 +145,7 @@ export function createRouter(dataCache: DataCacheService, automationService: Aut
         company,
         game,
         (event) => sendEvent(event),
-        { keepBrowserOpen, headless }
+        { keepBrowserOpen, headless, sheetSource: sheetSource || undefined }
       );
       res.end();
     } catch (err: any) {

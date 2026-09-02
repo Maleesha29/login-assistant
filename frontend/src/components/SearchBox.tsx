@@ -136,6 +136,11 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
                     {item.company}
                   </span>
                   <span className="font-semibold text-slate-100">{item.game}</span>
+                  {item.sheetSource && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      {item.sheetSource}
+                    </span>
+                  )}
                   <span className="text-xs text-slate-500 hidden md:inline truncate max-w-xs">
                     {item.url}
                   </span>

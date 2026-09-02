@@ -5,11 +5,19 @@ export interface AccountRecord {
   username: string;
   password?: string;
   rowNumber?: number;
+  sheetSource?: string;
 }
 
 export interface SheetCompanyData {
   companyName: string;
   games: Map<string, AccountRecord>;
+}
+
+export interface SheetSummary {
+  name: string;
+  idOrUrl?: string;
+  totalCompanies: number;
+  totalAccounts: number;
 }
 
 export interface SheetIndex {
@@ -18,6 +26,7 @@ export interface SheetIndex {
   lastUpdated: Date;
   isMockData: boolean;
   spreadsheetTitle?: string;
+  sheets?: SheetSummary[];
 }
 
 export interface SearchSuggestion {
@@ -27,6 +36,7 @@ export interface SearchSuggestion {
   username: string;
   label: string;
   score: number;
+  sheetSource?: string;
 }
 
 export interface AccountPreviewResponse {
@@ -36,6 +46,7 @@ export interface AccountPreviewResponse {
   username: string;
   hasPassword: boolean;
   password?: string;
+  sheetSource?: string;
 }
 
 export type AutomationStep =

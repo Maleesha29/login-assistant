@@ -7,7 +7,8 @@ export function normalizeKey(text: string): string {
 
 export function parseSheetTabs(
   tabsData: Array<{ tabName: string; rows: any[][] }>,
-  spreadsheetTitle: string = 'Google Sheet'
+  spreadsheetTitle: string = 'Google Sheet',
+  sheetSource: string = 'Sheet 1'
 ): SheetIndex {
   const companies = new Map<string, SheetCompanyData>();
   const allAccounts: AccountRecord[] = [];
@@ -50,7 +51,8 @@ export function parseSheetTabs(
         url: formatUrl(rawUrl),
         username: rawUsername,
         password: rawPassword,
-        rowNumber: i + 1
+        rowNumber: i + 1,
+        sheetSource
       };
 
       companyData.games.set(normalizedGame, record);
@@ -63,7 +65,84 @@ export function parseSheetTabs(
     allAccounts,
     lastUpdated: new Date(),
     isMockData: false,
-    spreadsheetTitle
+    spreadsheetTitle,
+    sheets: [
+      {
+        name: sheetSource,
+        idOrUrl: spreadsheetTitle,
+        totalCompanies: companies.size,
+        totalAccounts: allAccounts.length
+      }
+    ]
+  };
+}
+
+export function mergeSheetIndexes(indexes: SheetIndex[]): SheetIndex {
+  const validIndexes = indexes.filter(Boolean);
+  if (validIndexes.length === 0) {
+    return {
+      companies: new Map(),
+      allAccounts: [],
+      lastUpdated: new Date(),
+      isMockData: false,
+      spreadsheetTitle: 'No Sheets Configured',
+      sheets: []
+    };
+  }
+
+  if (validIndexes.length === 1) {
+    return validIndexes[0];
+  }
+
+  const mergedCompanies = new Map<string, SheetCompanyData>();
+  const mergedAccounts: AccountRecord[] = [];
+  const sheetsSummary: Array<{ name: string; idOrUrl?: string; totalCompanies: number; totalAccounts: number }> = [];
+
+  for (const idx of validIndexes) {
+    if (idx.sheets && idx.sheets.length > 0) {
+      sheetsSummary.push(...idx.sheets);
+    } else {
+      sheetsSummary.push({
+        name: idx.spreadsheetTitle || 'Sheet',
+        totalCompanies: idx.companies.size,
+        totalAccounts: idx.allAccounts.length
+      });
+    }
+
+    mergedAccounts.push(...idx.allAccounts);
+
+    for (const [compNorm, compData] of idx.companies.entries()) {
+      let existingComp = mergedCompanies.get(compNorm);
+      if (!existingComp) {
+        existingComp = {
+          companyName: compData.companyName,
+          games: new Map<string, AccountRecord>()
+        };
+        mergedCompanies.set(compNorm, existingComp);
+      }
+
+      for (const [gameNorm, record] of compData.games.entries()) {
+        // If exact game exists in both sheets, preserve both by keying secondary if duplicate
+        if (!existingComp.games.has(gameNorm)) {
+          existingComp.games.set(gameNorm, record);
+        } else {
+          // Disambiguate duplicate game key
+          const disambiguatedKey = `${gameNorm} (${record.sheetSource || 'Sheet'})`;
+          existingComp.games.set(disambiguatedKey, record);
+        }
+      }
+    }
+  }
+
+  const titles = sheetsSummary.map((s) => s.name).join(' & ');
+
+  return {
+    companies: mergedCompanies,
+    allAccounts: mergedAccounts,
+    lastUpdated: new Date(),
+    isMockData: false,
+    spreadsheetTitle: titles,
+    sheets: sheetsSummary
   };
 }
 
