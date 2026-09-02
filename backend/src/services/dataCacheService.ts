@@ -1,7 +1,6 @@
 import { GoogleSheetsClient } from '../googleSheets/sheetsClient';
 import { SheetIndex, AccountRecord, SearchSuggestion, AccountPreviewResponse } from '../types';
-import { normalizeKey, parseSheetTabs } from '../googleSheets/sheetParser';
-import { MOCK_SHEET_DATA } from '../googleSheets/sheetsClient';
+import { normalizeKey } from '../googleSheets/sheetParser';
 
 export class DataCacheService {
   private sheetsClient: GoogleSheetsClient;
@@ -26,12 +25,6 @@ export class DataCacheService {
       this.cache = await this.sheetsClient.fetchSpreadsheetData(sheetOverride);
       return this.cache;
     } catch (err: any) {
-      if (!this.cache) {
-        console.warn('⚠️ Falling back to mock dataset due to Google Sheets connection error.');
-        const fallback = parseSheetTabs(MOCK_SHEET_DATA, 'Mock Gaming Accounts (Offline)');
-        fallback.isMockData = true;
-        this.cache = fallback;
-      }
       throw err;
     } finally {
       this.isRefreshing = false;
@@ -52,8 +45,8 @@ export class DataCacheService {
         totalCompanies: 0,
         totalAccounts: 0,
         lastUpdated: null,
-        isMockData: true,
-        spreadsheetTitle: 'Uninitialized',
+        isMockData: false,
+        spreadsheetTitle: 'Not configured',
         configured: this.sheetsClient.isConfigured()
       };
     }

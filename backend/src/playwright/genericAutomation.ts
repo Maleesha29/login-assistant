@@ -65,8 +65,9 @@ const NEXT_BUTTON_SELECTORS = [
   'button:has-text("Next")',
   'button:has-text("Continue")',
   'button:has-text("Selanjutnya")',
-  'input[value="Next"]',
-  'button[type="submit"]'
+  'input[value="Next"]'
+  // NOTE: Do NOT include 'button[type="submit"]' here — it would accidentally
+  // submit the login form with only the username filled in on single-step pages.
 ];
 
 export async function executeLoginAutomation(
@@ -142,13 +143,18 @@ async function executeGenericLogin(
   await usernameInput.fill(account.username);
   emit('ENTERING_USERNAME', 'Filled username (' + account.username + ')', 65);
 
+  // Wait briefly after filling username — some sites dynamically reveal or
+  // animate the password field only after the username field is populated.
+  await page.waitForTimeout(800);
+
   emit('ENTERING_PASSWORD', 'Detecting password field...', 70);
 
   const passwordSelectors = siteConfig?.passwordSelector
     ? (Array.isArray(siteConfig.passwordSelector) ? siteConfig.passwordSelector : [siteConfig.passwordSelector])
     : PASSWORD_SELECTORS;
 
-  let passwordInput = await findFirstVisibleElement(page, passwordSelectors, 2000);
+  // Use a longer initial timeout (5s) to give slow/animated sites time to render the password field.
+  let passwordInput = await findFirstVisibleElement(page, passwordSelectors, 5000);
 
   if (!passwordInput) {
     emit('ENTERING_USERNAME', 'Multi-step login detected. Clicking next...', 72);

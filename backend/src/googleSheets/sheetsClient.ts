@@ -4,39 +4,6 @@ import * as XLSX from 'xlsx';
 import { SheetIndex } from '../types';
 import { parseSheetTabs } from './sheetParser';
 
-export const MOCK_SHEET_DATA: Array<{ tabName: string; rows: any[][] }> = [
-  {
-    tabName: 'HOLSPIN',
-    rows: [
-      ['GAME', 'WEBSITE', 'USERNAME', 'PASSWORD'],
-      ['JILI', 'https://example.com/login', 'holspin_user1', 'SecretPass123!'],
-      ['JULI', 'https://example.com/login', 'holspin_user2', 'SecretPass456!'],
-      ['1XBET', 'https://example.com/auth', 'holspin_1xbet', 'HolspinPass789#'],
-      ['PRAGMATIC', 'https://example.com/signin', 'holspin_prag', 'PragPass111$'],
-      ['EVOLUTION', 'https://example.com/members', 'holspin_evo', 'EvoPass222%']
-    ]
-  },
-  {
-    tabName: 'BETSDOGGY',
-    rows: [
-      ['GAME', 'WEBSITE', 'USERNAME', 'PASSWORD'],
-      ['JILI', 'https://example.com/doggy-jili', 'doggy_master', 'DoggyPass999!'],
-      ['JULI', 'https://example.com/doggy-juli', 'doggy_juli', 'DoggyPass888@'],
-      ['PGSOFT', 'https://example.com/pg', 'doggy_pg', 'DoggyPg333#'],
-      ['SPADEGAMING', 'https://example.com/spade', 'doggy_spade', 'DoggySpade444$']
-    ]
-  },
-  {
-    tabName: 'BETWAY',
-    rows: [
-      ['GAME', 'WEBSITE', 'USERNAME', 'PASSWORD'],
-      ['SLOTS', 'https://example.com/slots', 'betway_vip', 'BetwayPassVip1!'],
-      ['LIVE_CASINO', 'https://example.com/live', 'betway_live', 'BetwayPassLive2@'],
-      ['SPORTS', 'https://example.com/sports', 'betway_sports', 'BetwayPassSports3#']
-    ]
-  }
-];
-
 export class GoogleSheetsClient {
   private sheetIdOrUrl: string;
 
@@ -146,10 +113,9 @@ export class GoogleSheetsClient {
       }
     }
 
-    // 3. Fallback to mock dataset if nothing is provided
-    console.log('ℹ️ No Google Sheet URL configured in .env. Using mock dataset for local testing.');
-    const parsed = parseSheetTabs(MOCK_SHEET_DATA, 'Mock Gaming Accounts (Zero GCP Mode)');
-    parsed.isMockData = true;
-    return parsed;
+    // 3. No source configured — require the user to provide a Google Sheet URL or local file
+    throw new Error(
+      'No data source configured. Please provide a Google Sheet URL via the Settings panel or place an accounts.xlsx file in the project root.'
+    );
   }
 }

@@ -32,19 +32,21 @@ app.get('/', (req, res) => {
 });
 
 async function start() {
+  console.log('🚀 Initializing Login Assistant Backend...');
+
   try {
-    console.log('🚀 Initializing Login Assistant Backend...');
     await dataCache.init();
     const stats = dataCache.getStats();
-    console.log('📊 Cached ' + stats.totalCompanies + ' companies and ' + stats.totalAccounts + ' accounts (Mock: ' + stats.isMockData + ').');
-
-    app.listen(PORT, () => {
-      console.log('⚡ Server listening locally on http://localhost:' + PORT);
-    });
+    console.log('📊 Cached ' + stats.totalCompanies + ' companies and ' + stats.totalAccounts + ' accounts from: ' + stats.spreadsheetTitle);
   } catch (err: any) {
-    console.error('❌ Failed to start backend server:', err);
-    process.exit(1);
+    // Not a fatal error — the user simply hasn\'t configured a Google Sheet yet.
+    // The server starts normally and waits for a URL via the Settings panel.
+    console.warn('⚠️  No data source configured yet. Server will start and wait for a Google Sheet URL via the Settings panel.');
   }
+
+  app.listen(PORT, () => {
+    console.log('⚡ Server listening locally on http://localhost:' + PORT);
+  });
 }
 
 start();
