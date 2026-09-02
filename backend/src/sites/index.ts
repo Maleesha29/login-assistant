@@ -1,13 +1,10 @@
 import { SiteLoginConfig } from '../types';
-import holspinConfig from './HOLSPIN';
-import betsdoggyConfig from './BETSDOGGY';
 
 class SiteRegistry {
   private configs = new Map<string, SiteLoginConfig>();
 
   constructor() {
-    this.register(holspinConfig);
-    this.register(betsdoggyConfig);
+    // Registry is initially empty; custom site profiles can be registered here as needed
   }
 
   public register(config: SiteLoginConfig): void {

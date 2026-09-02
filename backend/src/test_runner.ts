@@ -1,15 +1,25 @@
 import { DataCacheService } from './services/dataCacheService';
 import { parseSheetTabs } from './googleSheets/sheetParser';
-import { MOCK_SHEET_DATA } from './googleSheets/sheetsClient';
 import { siteRegistry } from './sites';
+
+const TEST_FIXTURE_DATA = [
+  {
+    tabName: 'HOLSPIN',
+    rows: [
+      ['GAME', 'WEBSITE', 'USERNAME', 'PASSWORD'],
+      ['JILI', 'https://example.com/login', 'holspin_user1', 'SecretPass123!'],
+      ['JULI', 'https://example.com/login', 'holspin_user2', 'SecretPass456!']
+    ]
+  }
+];
 
 async function runTests() {
   console.log('🧪 Running Backend Unit & Integration Tests...');
 
-  console.log('\n[1/4] Testing Sheet Parser & Normalization...');
-  const index = parseSheetTabs(MOCK_SHEET_DATA, 'Test Sheet');
-  if (index.companies.size !== 3) {
-    throw new Error('Expected 3 companies, got ' + index.companies.size);
+  console.log('\n[1/2] Testing Sheet Parser & Normalization...');
+  const index = parseSheetTabs(TEST_FIXTURE_DATA, 'Test Sheet');
+  if (index.companies.size !== 1) {
+    throw new Error('Expected 1 company, got ' + index.companies.size);
   }
   console.log('Accounts parsed: ' + index.allAccounts.length);
   console.log('✅ Sheet Parser parsed tabs and rows correctly.');

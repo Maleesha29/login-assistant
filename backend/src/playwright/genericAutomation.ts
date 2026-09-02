@@ -1,62 +1,102 @@
-import { Page } from 'playwright';
+import { Page, Locator, Frame } from 'playwright';
 import { AccountRecord, AutomationProgressEvent, SiteLoginConfig, SiteStepAction } from '../types';
 import { siteRegistry } from '../sites';
 
 export type ProgressCallback = (event: AutomationProgressEvent) => void;
 
+export interface FoundElement {
+  locator: Locator;
+  frame: Page | Frame;
+}
+
 const USERNAME_SELECTORS = [
-  'input[type="email"]',
-  'input[name="email"]',
-  'input[name="username"]',
-  'input[name="user"]',
-  'input[name="login"]',
-  'input[name="account"]',
-  'input[id="email"]',
-  'input[id="username"]',
-  'input[id="user"]',
-  'input[id="login"]',
-  'input[id="account"]',
-  'input[autocomplete="username"]',
-  'input[autocomplete="email"]',
+  // Common placeholders (case-insensitive) - e.g. JILI, PG, Slot admin panels
+  'input[placeholder*="account" i]',
   'input[placeholder*="username" i]',
   'input[placeholder*="user" i]',
+  'input[placeholder*="login" i]',
   'input[placeholder*="email" i]',
-  'input[placeholder*="account" i]',
   'input[placeholder*="phone" i]',
-  'input[type="text"]:visible',
-  'input:not([type="hidden"]):not([type="password"]):not([type="checkbox"]):not([type="radio"]):visible'
+  'input[placeholder*="id" i]',
+  'input[placeholder*="member" i]',
+
+  // Name attributes
+  'input[name="account" i]',
+  'input[name="username" i]',
+  'input[name="user" i]',
+  'input[name="login" i]',
+  'input[name="email" i]',
+
+  // ID attributes
+  'input[id*="account" i]',
+  'input[id*="username" i]',
+  'input[id*="user" i]',
+  'input[id*="login" i]',
+  'input[id*="email" i]',
+
+  // Standard autocomplete & types
+  'input[autocomplete="username"]',
+  'input[autocomplete="email"]',
+  'input[type="email"]',
+
+  // UI framework classes (Element UI, Ant Design, Tailwind forms)
+  '.el-input__inner:not([type="password"])',
+  '.ant-input:not([type="password"])',
+
+  // Generic fallback inputs (only text-capable fields, not hidden/submit/button)
+  'input[type="text"]',
+  'input:not([type="hidden"]):not([type="password"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"])'
 ];
 
 const PASSWORD_SELECTORS = [
   'input[type="password"]',
-  'input[name="password"]',
-  'input[name="passwd"]',
-  'input[name="pwd"]',
-  'input[id="password"]',
-  'input[id="passwd"]',
-  'input[id="pwd"]',
   'input[autocomplete="current-password"]',
   'input[autocomplete="password"]',
   'input[placeholder*="password" i]',
-  'input[placeholder*="pass" i]'
+  'input[placeholder*="passwd" i]',
+  'input[placeholder*="pwd" i]',
+  'input[placeholder*="pass" i]',
+  'input[name*="password" i]',
+  'input[name*="passwd" i]',
+  'input[name*="pwd" i]',
+  'input[name*="pass" i]',
+  'input[id*="password" i]',
+  'input[id*="passwd" i]',
+  'input[id*="pwd" i]',
+  '.el-input__inner[type="password"]',
+  '.ant-input-password input'
 ];
 
 const LOGIN_BUTTON_SELECTORS = [
   'button[type="submit"]',
   'input[type="submit"]',
+  'button:has-text("Sign In")',
+  'button:has-text("Sign in")',
+  'button:has-text("Log In")',
   'button:has-text("Log in")',
   'button:has-text("Login")',
-  'button:has-text("Log In")',
-  'button:has-text("Sign in")',
   'button:has-text("Signin")',
-  'button:has-text("Sign In")',
   'button:has-text("Masuk")',
   'button:has-text("Submit")',
+  // Element UI / Ant Design primary buttons
+  'button.el-button--primary',
+  'button.ant-btn-primary',
+  '.el-button--primary',
+  '.ant-btn-primary',
+  'button[class*="login" i]',
+  'button[class*="submit" i]',
+  'button[id*="login" i]',
+  'button[id*="submit" i]',
+  'a:has-text("Sign In")',
+  'a:has-text("Sign in")',
+  'a:has-text("Log In")',
   'a:has-text("Log in")',
   'a:has-text("Login")',
-  'a:has-text("Sign in")',
-  '[role="button"]:has-text("Log in")',
+  '[role="button"]:has-text("Sign In")',
   '[role="button"]:has-text("Sign in")',
+  '[role="button"]:has-text("Log In")',
+  '[role="button"]:has-text("Log in")',
+  '[role="button"]:has-text("Login")',
   '.login-btn',
   '#login-btn'
 ];
@@ -66,8 +106,6 @@ const NEXT_BUTTON_SELECTORS = [
   'button:has-text("Continue")',
   'button:has-text("Selanjutnya")',
   'input[value="Next"]'
-  // NOTE: Do NOT include 'button[type="submit"]' here — it would accidentally
-  // submit the login form with only the username filled in on single-step pages.
 ];
 
 export async function executeLoginAutomation(
@@ -93,7 +131,8 @@ export async function executeLoginAutomation(
       timeout: parseInt(process.env.LOGIN_TIMEOUT_MS || '30000', 10)
     });
 
-    await page.waitForTimeout(1000);
+    // Wait briefly for SPA scripts/DOM hydration
+    await page.waitForTimeout(1500);
 
     const siteConfig = siteRegistry.findConfig(account.company, account.url);
 
@@ -133,19 +172,16 @@ async function executeGenericLogin(
     ? (Array.isArray(siteConfig.usernameSelector) ? siteConfig.usernameSelector : [siteConfig.usernameSelector])
     : USERNAME_SELECTORS;
 
-  const usernameInput = await findFirstVisibleElement(page, usernameSelectors, 7000);
+  const usernameInput = await findFirstVisibleElement(page, usernameSelectors, 8000);
   if (!usernameInput) {
     throw new Error('Could not find username or email input field on the page.');
   }
 
-  await usernameInput.click();
-  await usernameInput.fill('');
-  await usernameInput.fill(account.username);
+  await fillInput(usernameInput, account.username);
   emit('ENTERING_USERNAME', 'Filled username (' + account.username + ')', 65);
 
-  // Wait briefly after filling username — some sites dynamically reveal or
-  // animate the password field only after the username field is populated.
-  await page.waitForTimeout(800);
+  // Short pause before checking password
+  await page.waitForTimeout(600);
 
   emit('ENTERING_PASSWORD', 'Detecting password field...', 70);
 
@@ -153,14 +189,13 @@ async function executeGenericLogin(
     ? (Array.isArray(siteConfig.passwordSelector) ? siteConfig.passwordSelector : [siteConfig.passwordSelector])
     : PASSWORD_SELECTORS;
 
-  // Use a longer initial timeout (5s) to give slow/animated sites time to render the password field.
   let passwordInput = await findFirstVisibleElement(page, passwordSelectors, 5000);
 
   if (!passwordInput) {
     emit('ENTERING_USERNAME', 'Multi-step login detected. Clicking next...', 72);
     const nextBtn = await findFirstVisibleElement(page, NEXT_BUTTON_SELECTORS, 3000);
     if (nextBtn) {
-      await nextBtn.click();
+      await nextBtn.locator.click().catch(() => {});
       await page.waitForTimeout(1500);
     }
     passwordInput = await findFirstVisibleElement(page, passwordSelectors, 8000);
@@ -171,13 +206,13 @@ async function executeGenericLogin(
   }
 
   if (account.password) {
-    await passwordInput.click();
-    await passwordInput.fill('');
-    await passwordInput.fill(account.password);
+    await fillInput(passwordInput, account.password);
     emit('ENTERING_PASSWORD', 'Filled password.', 85);
   } else {
     emit('ENTERING_PASSWORD', 'No password provided; skipped password entry.', 85);
   }
+
+  await page.waitForTimeout(500);
 
   emit('SUBMITTING_LOGIN', 'Detecting login button and submitting...', 90);
 
@@ -188,10 +223,15 @@ async function executeGenericLogin(
   const loginButton = await findFirstVisibleElement(page, loginSelectors, 4000);
 
   if (loginButton) {
-    await loginButton.click();
+    try {
+      await loginButton.locator.click();
+    } catch (clickErr) {
+      // Fallback click via DOM dispatch
+      await loginButton.locator.dispatchEvent('click').catch(() => {});
+    }
   } else {
     emit('SUBMITTING_LOGIN', 'Login button not found directly; pressing Enter on password field...', 92);
-    await passwordInput.press('Enter');
+    await passwordInput.locator.press('Enter').catch(() => {});
   }
 
   emit('SUBMITTING_LOGIN', 'Submitted login. Waiting for page response...', 95);
@@ -258,26 +298,108 @@ async function executeCustomSteps(
   }
 }
 
+/**
+ * Searches for a visible and editable element matching any selector across
+ * the main document and all child iframes.
+ * Evaluates EVERY matching element in each locator so a hidden element does
+ * not mask a visible one.
+ */
 async function findFirstVisibleElement(
   page: Page,
   selectors: string[],
-  timeoutMs: number = 3000
-) {
+  timeoutMs: number = 7000
+): Promise<FoundElement | null> {
   const startTime = Date.now();
 
   while (Date.now() - startTime < timeoutMs) {
-    for (const selector of selectors) {
-      try {
-        const locator = page.locator(selector).first();
-        const count = await locator.count();
-        if (count > 0 && await locator.isVisible()) {
-          return locator;
+    const frames: (Page | Frame)[] = [page.mainFrame(), ...page.frames().filter(f => f !== page.mainFrame())];
+
+    for (const frame of frames) {
+      for (const selector of selectors) {
+        try {
+          const locators = frame.locator(selector);
+          const count = await locators.count().catch(() => 0);
+
+          for (let i = 0; i < count; i++) {
+            const candidate = locators.nth(i);
+            const isVis = await candidate.isVisible().catch(() => false);
+            if (isVis) {
+              const isEditable = await candidate.isEditable().catch(() => true);
+              if (isEditable) {
+                return { locator: candidate, frame };
+              }
+            }
+          }
+        } catch (e) {
+          // Selector not supported or frame detached, try next
         }
-      } catch (e) {
       }
     }
     await page.waitForTimeout(200);
   }
 
   return null;
+}
+
+/**
+ * Robust input filling that works on React, Vue (Element UI), Angular, and plain HTML.
+ * Uses a multi-tier approach:
+ * 1. Focus & clear
+ * 2. Playwright native fill()
+ * 3. Fallback to sequential keystrokes (pressSequentially) if framework cleared the value
+ * 4. Dispatches input, change, and blur events so reactive bindings (v-model, onChange) sync
+ */
+async function fillInput(
+  found: FoundElement,
+  value: string
+): Promise<void> {
+  if (!found || !value) return;
+  const { locator } = found;
+
+  try {
+    // 1. Scroll into view and focus
+    await locator.scrollIntoViewIfNeeded().catch(() => {});
+    await locator.click({ force: true }).catch(() => {});
+    await locator.page().waitForTimeout(80);
+
+    // 2. Clear field
+    await locator.fill('').catch(() => {});
+    await locator.press('Control+a').catch(() => {});
+    await locator.press('Backspace').catch(() => {});
+    await locator.page().waitForTimeout(50);
+
+    // 3. Fill via Playwright native fill
+    let filledSuccess = false;
+    try {
+      await locator.fill(value);
+      filledSuccess = true;
+    } catch (e) {
+      // Native fill can fail on custom wrapped inputs
+    }
+
+    // 4. Verify value took effect; if not, type character by character
+    const currentVal = await locator.inputValue().catch(() => '');
+    if (!filledSuccess || currentVal !== value) {
+      await locator.click({ force: true }).catch(() => {});
+      await locator.press('Control+a').catch(() => {});
+      await locator.press('Backspace').catch(() => {});
+      await locator.pressSequentially(value, { delay: 35 });
+    }
+
+    // 5. Ensure reactive frameworks (Vue Element UI, React) receive change events
+    await locator.evaluate((el: HTMLInputElement, val: string) => {
+      if (el && 'value' in el) {
+        if (el.value !== val) {
+          el.value = val;
+        }
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.dispatchEvent(new Event('blur', { bubbles: true }));
+      }
+    }, value).catch(() => {});
+
+    await locator.page().waitForTimeout(100);
+  } catch (err: any) {
+    console.warn('⚠️ fillInput warning:', err?.message || err);
+  }
 }
