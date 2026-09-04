@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ExternalLink, Play, Eye, EyeOff, Star, FileSpreadsheet } from 'lucide-react';
+import { ExternalLink, Play, Eye, EyeOff, Star, FileSpreadsheet, Link2 } from 'lucide-react';
 import { AccountPreview as AccountPreviewType } from '../types';
 
 interface AccountPreviewProps {
@@ -8,6 +8,7 @@ interface AccountPreviewProps {
   isFavorite: boolean;
   onToggleFavorite: () => void;
   isLoggingIn: boolean;
+  onSelectFallback?: (company: string, game: string) => void;
 }
 
 export const AccountPreview: React.FC<AccountPreviewProps> = ({
@@ -114,6 +115,29 @@ export const AccountPreview: React.FC<AccountPreviewProps> = ({
           </div>
         </div>
       </div>
+
+      {account.fallbacks && account.fallbacks.length > 0 && (
+        <div className="mt-4 p-3 rounded-xl bg-dark-900/90 border border-dark-750 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <Link2 className="w-3.5 h-3.5 text-accent-cyan shrink-0" />
+            <span>Alternative working links for <strong className="text-slate-200">{account.game}</strong>:</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {account.fallbacks.map((fb) => (
+              <button
+                key={fb.game}
+                type="button"
+                onClick={() => onSelectFallback ? onSelectFallback(account.company, fb.game) : window.open(fb.url, '_blank')}
+                className="px-2.5 py-1 rounded-lg bg-dark-800 hover:bg-dark-750 border border-dark-700 hover:border-accent-cyan/50 text-[11px] font-semibold text-accent-cyan hover:text-white transition flex items-center gap-1"
+                title={`Switch to ${fb.game} (${fb.url})`}
+              >
+                <span>{fb.game}</span>
+                <ExternalLink className="w-3 h-3 opacity-60" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

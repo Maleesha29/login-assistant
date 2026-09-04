@@ -8,8 +8,6 @@ build/
 */dist/
 
 # Environment Variables & Google Secrets
-.env
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -26,7 +24,6 @@ yarn-error.log*
 # Editor & System
 .DS_Store
 Thumbs.db
-.vscode/
 .idea/
 
 # Playwright
@@ -34,3 +31,4 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+config.bat

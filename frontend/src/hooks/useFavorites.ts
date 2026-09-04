@@ -44,20 +44,44 @@ export function useFavorites() {
   };
 
   const removeFavorite = (idOrCompany: string, game?: string) => {
-    const id = game
-      ? `${idOrCompany.trim().toLowerCase()}_${game.trim().toLowerCase()}`
-      : idOrCompany.trim().toLowerCase();
+    if (!idOrCompany) return;
+    setFavorites((prev) => {
+      if (game) {
+        const targetId = `${idOrCompany.trim().toLowerCase()}_${game.trim().toLowerCase()}`;
+        return prev.filter((item) => {
+          const itemKey = `${(item.company || '').trim().toLowerCase()}_${(item.game || '').trim().toLowerCase()}`;
+          return item.id !== targetId && itemKey !== targetId;
+        });
+      }
 
-    setFavorites((prev) => prev.filter((item) => item.id !== id && item.id.toLowerCase() !== id));
+      const target = idOrCompany.trim().toLowerCase();
+      return prev.filter((item) => {
+        const itemId = (item.id || '').trim().toLowerCase();
+        const itemKey = `${(item.company || '').trim().toLowerCase()}_${(item.game || '').trim().toLowerCase()}`;
+        return itemId !== target && itemKey !== target;
+      });
+    });
   };
 
   const toggleFavorite = (company: string, game: string, sheetSource?: string) => {
     if (!company || !game) return;
-    const id = `${company.trim().toLowerCase()}_${game.trim().toLowerCase()}`;
+    const cNorm = company.trim().toLowerCase();
+    const gNorm = game.trim().toLowerCase();
+    const id = `${cNorm}_${gNorm}`;
+
     setFavorites((prev) => {
-      const exists = prev.some((item) => item.id === id);
+      const exists = prev.some((item) => {
+        const itemC = (item.company || '').trim().toLowerCase();
+        const itemG = (item.game || '').trim().toLowerCase();
+        return item.id === id || (itemC === cNorm && itemG === gNorm);
+      });
+
       if (exists) {
-        return prev.filter((item) => item.id !== id);
+        return prev.filter((item) => {
+          const itemC = (item.company || '').trim().toLowerCase();
+          const itemG = (item.game || '').trim().toLowerCase();
+          return item.id !== id && !(itemC === cNorm && itemG === gNorm);
+        });
       } else {
         return [
           {
@@ -79,8 +103,15 @@ export function useFavorites() {
 
   const isFavorite = (company: string, game: string): boolean => {
     if (!company || !game) return false;
-    const id = `${company.trim().toLowerCase()}_${game.trim().toLowerCase()}`;
-    return favorites.some((item) => item.id === id);
+    const cNorm = company.trim().toLowerCase();
+    const gNorm = game.trim().toLowerCase();
+    const id = `${cNorm}_${gNorm}`;
+
+    return favorites.some((item) => {
+      const itemC = (item.company || '').trim().toLowerCase();
+      const itemG = (item.game || '').trim().toLowerCase();
+      return item.id === id || (itemC === cNorm && itemG === gNorm);
+    });
   };
 
   return {

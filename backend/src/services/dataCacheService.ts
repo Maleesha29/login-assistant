@@ -194,6 +194,8 @@ export class DataCacheService {
     const acc = this.getExactAccount(company, game, sheetSource);
     if (!acc) return null;
 
+    const fallbacks = this.getFallbackAccounts(acc.company, acc.game, acc.sheetSource);
+
     return {
       company: acc.company,
       game: acc.game,
@@ -201,7 +203,8 @@ export class DataCacheService {
       username: acc.username,
       hasPassword: Boolean(acc.password),
       password: acc.password,
-      sheetSource: acc.sheetSource
+      sheetSource: acc.sheetSource,
+      fallbacks: fallbacks.map((f) => ({ game: f.game, url: f.url }))
     };
   }
 
@@ -219,4 +222,52 @@ export class DataCacheService {
     if (!compData) return [];
     return Array.from(compData.games.values());
   }
+
+  public getFallbackAccounts(company: string, game: string, sheetSource?: string): AccountRecord[] {
+    if (!this.cache) return [];
+    const allInCompany = this.getGamesForCompany(company);
+    if (allInCompany.length === 0) return [];
+
+    const baseFamily = getGameFamily(game);
+    const currentNorm = normalizeKey(game);
+    const currentAccount = this.getExactAccount(company, game, sheetSource);
+    const currentUrl = currentAccount?.url?.trim().toLowerCase() || '';
+
+    // 1. Primary priority: accounts in same company with same game family and DIFFERENT url
+    const familyMatches = allInCompany.filter((a) => {
+      if (!a.url || !a.url.trim()) return false;
+      if (a.url.trim().toLowerCase() === currentUrl) return false;
+      const otherNorm = normalizeKey(a.game);
+      if (otherNorm === currentNorm) return false;
+
+      const otherFamily = getGameFamily(a.game);
+      return (
+        (baseFamily && otherFamily === baseFamily) ||
+        otherNorm.startsWith(baseFamily) ||
+        baseFamily.startsWith(otherFamily)
+      );
+    });
+
+    // Sort family matches: exact base (e.g. 'jili') first, then variants ('jili1', 'jili3')
+    familyMatches.sort((a, b) => {
+      const aNorm = normalizeKey(a.game);
+      const bNorm = normalizeKey(b.game);
+      if (aNorm === baseFamily) return -1;
+      if (bNorm === baseFamily) return 1;
+      return aNorm.localeCompare(bNorm);
+    });
+
+    return familyMatches;
+  }
+}
+
+export function getGameFamily(gameName: string): string {
+  if (!gameName) return '';
+  const clean = gameName.trim().toLowerCase();
+  // Strip trailing version/number indicators e.g. "jili2" -> "jili", "jili 3" -> "jili", "jili-2" -> "jili"
+  const base = clean
+    .replace(/\s*(?:v|ver|server|link)?\s*\d+$/i, '')
+    .replace(/[-_]\d+$/, '')
+    .trim();
+  return base || clean;
 }
