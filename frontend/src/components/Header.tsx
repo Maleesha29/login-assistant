@@ -1,11 +1,12 @@
 import React from 'react';
-import { Shield, RefreshCw, Sliders, Database } from 'lucide-react';
+import { Shield, RefreshCw, Sliders, Database, FileSpreadsheet, Check } from 'lucide-react';
 import { BackendStats } from '../types';
 
 interface HeaderProps {
   stats: BackendStats | null;
   onRefresh: () => void;
   isRefreshing: boolean;
+  isSyncSuccess?: boolean;
   onOpenSettings: () => void;
   onOpenBrowser: () => void;
 }
@@ -14,6 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   stats,
   onRefresh,
   isRefreshing,
+  isSyncSuccess,
   onOpenSettings,
   onOpenBrowser
 }) => {
@@ -70,11 +72,28 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-dark-800/80 hover:bg-dark-700 disabled:opacity-50 text-slate-300 hover:text-white border border-dark-700 transition text-xs font-medium"
-            title="Reload Google Sheets Data"
+            className={'flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border transition text-xs font-semibold ' + (
+              isSyncSuccess
+                ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-sm shadow-emerald-500/20'
+                : isRefreshing
+                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400'
+                : 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 hover:border-emerald-500/50 text-emerald-300 hover:text-white'
+            )}
+            title="Sync accounts directly from Google Sheets"
           >
-            <RefreshCw className={'w-3.5 h-3.5 text-brand-400 ' + (isRefreshing ? 'animate-spin' : '')} />
-            <span className="hidden md:inline">Refresh Data</span>
+            {isSyncSuccess ? (
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+            ) : (
+              <RefreshCw className={'w-3.5 h-3.5 text-emerald-400 ' + (isRefreshing ? 'animate-spin' : '')} />
+            )}
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 opacity-80 hidden sm:inline" />
+            <span>
+              {isSyncSuccess
+                ? 'Sheets Synced!'
+                : isRefreshing
+                ? 'Syncing Sheets...'
+                : 'Sync Google Sheets'}
+            </span>
           </button>
 
           <button

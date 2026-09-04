@@ -111,7 +111,8 @@ const NEXT_BUTTON_SELECTORS = [
 export async function executeLoginAutomation(
   page: Page,
   account: AccountRecord,
-  onProgress: ProgressCallback
+  onProgress: ProgressCallback,
+  fallbackAccounts?: AccountRecord[]
 ): Promise<void> {
   const emit = (step: AutomationProgressEvent['step'], message: string, percent: number, error?: string) => {
     onProgress({
@@ -124,22 +125,85 @@ export async function executeLoginAutomation(
   };
 
   try {
-    emit('OPENING_WEBSITE', 'Navigating to ' + account.url + '...', 30);
+    const candidates: Array<{ account: AccountRecord; isFallback: boolean }> = [
+      { account, isFallback: false },
+      ...(fallbackAccounts || []).map((fb) => ({ account: fb, isFallback: true }))
+    ];
 
-    await page.goto(account.url, {
-      waitUntil: 'domcontentloaded',
-      timeout: parseInt(process.env.LOGIN_TIMEOUT_MS || '30000', 10)
-    });
+    let workingAccount: AccountRecord = account;
+    let connected = false;
+    let lastError: any = null;
 
-    // Wait briefly for SPA scripts/DOM hydration
-    await page.waitForTimeout(1500);
+    for (const candidate of candidates) {
+      const targetUrl = candidate.account.url;
+      if (!targetUrl) continue;
 
-    const siteConfig = siteRegistry.findConfig(account.company, account.url);
+      if (candidate.isFallback) {
+        emit(
+          'OPENING_WEBSITE',
+          `Trying fallback URL from "${candidate.account.game}" (${targetUrl})...`,
+          34
+        );
+      } else {
+        emit('OPENING_WEBSITE', 'Navigating to ' + targetUrl + '...', 30);
+      }
+
+      try {
+        const response = await page.goto(targetUrl, {
+          waitUntil: 'domcontentloaded',
+          timeout: candidate.isFallback ? 15000 : parseInt(process.env.LOGIN_TIMEOUT_MS || '30000', 10)
+        });
+
+        // If server returned a 5xx server error, treat as unreachable
+        if (response && response.status() >= 500) {
+          throw new Error(`Server returned HTTP ${response.status()}`);
+        }
+
+        // Wait briefly for SPA scripts/DOM hydration
+        await page.waitForTimeout(1500);
+
+        connected = true;
+        // Use the working URL, but keep requested credentials
+        workingAccount = {
+          ...account,
+          url: targetUrl
+        };
+
+        if (candidate.isFallback) {
+          emit(
+            'OPENING_WEBSITE',
+            `✓ Connected using working URL from "${candidate.account.game}" (${targetUrl})!`,
+            38
+          );
+        }
+        break;
+      } catch (navErr: any) {
+        lastError = navErr;
+        console.warn(`⚠️ Failed to reach ${targetUrl} (${candidate.account.game}):`, navErr.message);
+
+        if (!candidate.isFallback && (fallbackAccounts && fallbackAccounts.length > 0)) {
+          emit(
+            'OPENING_WEBSITE',
+            `⚠️ "${account.game}" site unreachable. Attempting fallback game links...`,
+            32
+          );
+        }
+      }
+    }
+
+    if (!connected) {
+      const triedSummary = candidates.map((c) => `${c.account.game}: ${c.account.url}`).join(', ');
+      throw new Error(
+        `Unable to reach website for ${account.company} / ${account.game}. Tried: [${triedSummary}]. Error: ${lastError?.message || 'Connection failed'}`
+      );
+    }
+
+    const siteConfig = siteRegistry.findConfig(workingAccount.company, workingAccount.url);
 
     if (siteConfig) {
       emit('OPENING_WEBSITE', 'Using custom site profile for ' + siteConfig.companyOrDomain, 40);
       if (siteConfig.customSteps && siteConfig.customSteps.length > 0) {
-        await executeCustomSteps(page, siteConfig.customSteps, account, emit);
+        await executeCustomSteps(page, siteConfig.customSteps, workingAccount, emit);
         const waitMs = siteConfig.waitAfterLogin || 3000;
         await page.waitForTimeout(waitMs);
         emit('LOGIN_COMPLETED', 'Login completed successfully via site profile.', 100);
@@ -147,7 +211,7 @@ export async function executeLoginAutomation(
       }
     }
 
-    await executeGenericLogin(page, account, siteConfig, emit);
+    await executeGenericLogin(page, workingAccount, siteConfig, emit);
 
     const waitMs = siteConfig?.waitAfterLogin || 3000;
     await page.waitForTimeout(waitMs);

@@ -54,7 +54,12 @@ export class AutomationService {
       headless: options?.headless
     });
 
-    await executeLoginAutomation(page, account, onProgress);
+    const fallbacks = this.dataCache.getFallbackAccounts(account.company, account.game, options?.sheetSource);
+    if (fallbacks.length > 0) {
+      console.log(`🔗 Found ${fallbacks.length} fallback URL(s) for ${account.company} / ${account.game}:`, fallbacks.map((f) => `${f.game}: ${f.url}`).join(' | '));
+    }
+
+    await executeLoginAutomation(page, account, onProgress, fallbacks);
 
     const keepOpen = options?.keepBrowserOpen ?? (process.env.KEEP_BROWSER_OPEN !== 'false');
     if (!keepOpen) {
