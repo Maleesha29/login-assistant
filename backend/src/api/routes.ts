@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { exec } from 'child_process';
 import { DataCacheService } from '../services/dataCacheService';
 import { AutomationService } from '../services/automationService';
 import { siteRegistry } from '../sites';
@@ -14,7 +15,9 @@ export function createRouter(dataCache: DataCacheService, automationService: Aut
       res.json({
         success: true,
         stats,
-        browserOpen: browserManager.isBrowserOpen()
+        browserOpen: browserManager.isBrowserOpen(),
+        downloadsPath: browserManager.getDownloadsPath(),
+        recentDownloads: browserManager.getRecentDownloads()
       });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
@@ -163,6 +166,30 @@ export function createRouter(dataCache: DataCacheService, automationService: Aut
   router.post('/browser/close', async (req: Request, res: Response) => {
     await browserManager.closeBrowser();
     res.json({ success: true, message: 'Browser closed.' });
+  });
+
+  router.get('/downloads', (req: Request, res: Response) => {
+    res.json({
+      success: true,
+      downloadsPath: browserManager.getDownloadsPath(),
+      recentDownloads: browserManager.getRecentDownloads()
+    });
+  });
+
+  router.post('/downloads/open-folder', (req: Request, res: Response) => {
+    const folder = browserManager.getDownloadsPath();
+    const command = process.platform === 'win32'
+      ? `start "" "${folder}"`
+      : process.platform === 'darwin'
+      ? `open "${folder}"`
+      : `xdg-open "${folder}"`;
+
+    exec(command, (err) => {
+      if (err) {
+        return res.status(500).json({ success: false, error: err.message });
+      }
+      res.json({ success: true, folder });
+    });
   });
 
   return router;

@@ -47,6 +47,14 @@ export interface AutomationProgressEvent {
   error?: string;
 }
 
+export interface DownloadRecord {
+  id: string;
+  filename: string;
+  path: string;
+  sizeBytes?: number;
+  downloadedAt: string;
+}
+
 export interface BackendStats {
   initialized: boolean;
   totalCompanies: number;
@@ -56,6 +64,8 @@ export interface BackendStats {
   spreadsheetTitle: string;
   configured: boolean;
   sheets?: SheetSummary[];
+  downloadsPath?: string;
+  recentDownloads?: DownloadRecord[];
 }
 
 export interface SavedItem {
@@ -65,3 +75,4 @@ export interface SavedItem {
   timestamp: number;
   sheetSource?: string;
 }
+

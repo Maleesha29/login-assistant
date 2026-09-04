@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
-import { X, Link2, Monitor, RefreshCw, FileSpreadsheet, Shield, CheckCircle2, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  X, Link2, Monitor, RefreshCw, FileSpreadsheet,
+  Shield, CheckCircle2, Save, Trash2, BookmarkCheck,
+  FolderOpen, Download
+} from 'lucide-react';
 import { BackendStats } from '../types';
+import { useSavedSheets, SheetConfig } from '../hooks/useSavedSheets';
+import { openDownloadsFolder } from '../services/api';
 
 interface SettingsDrawerProps {
   isOpen: boolean;
@@ -8,7 +14,7 @@ interface SettingsDrawerProps {
   stats: BackendStats | null;
   keepBrowserOpen: boolean;
   onToggleKeepBrowserOpen: (val: boolean) => void;
-  onRefreshData: (params?: { sheet1Url?: string; sheet1Name?: string; sheet2Url?: string; sheet2Name?: string }) => void;
+  onRefreshData: (params?: Partial<SheetConfig>) => void;
   isRefreshing: boolean;
 }
 
@@ -21,22 +27,71 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   onRefreshData,
   isRefreshing
 }) => {
+  const { savedSheets, hasSaved, saveSheets, clearSaved } = useSavedSheets();
+
   const [sheet1Url, setSheet1Url] = useState<string>('');
   const [sheet1Name, setSheet1Name] = useState<string>('Sheet 1');
   const [sheet2Url, setSheet2Url] = useState<string>('');
   const [sheet2Name, setSheet2Name] = useState<string>('Sheet 2');
+  const [rememberSheets, setRememberSheets] = useState<boolean>(hasSaved);
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [openingFolder, setOpeningFolder] = useState<boolean>(false);
+
+  // Pre-fill fields from saved config when drawer opens
+  useEffect(() => {
+    if (isOpen) {
+      setSheet1Url(savedSheets.sheet1Url || '');
+      setSheet1Name(savedSheets.sheet1Name || 'Sheet 1');
+      setSheet2Url(savedSheets.sheet2Url || '');
+      setSheet2Name(savedSheets.sheet2Name || 'Sheet 2');
+      setRememberSheets(hasSaved);
+      setSaveSuccess(false);
+    }
+  }, [isOpen, hasSaved, savedSheets]);
 
   if (!isOpen) return null;
 
   const handleConnectSheets = (e: React.FormEvent) => {
     e.preventDefault();
-    onRefreshData({
+    const params = {
       sheet1Url: sheet1Url.trim(),
       sheet1Name: sheet1Name.trim() || 'Sheet 1',
       sheet2Url: sheet2Url.trim(),
       sheet2Name: sheet2Name.trim() || 'Sheet 2'
-    });
+    };
+
+    if (rememberSheets) {
+      saveSheets(params);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } else {
+      clearSaved();
+    }
+
+    onRefreshData(params);
   };
+
+  const handleClearSaved = () => {
+    clearSaved();
+    setSheet1Url('');
+    setSheet1Name('Sheet 1');
+    setSheet2Url('');
+    setSheet2Name('Sheet 2');
+    setRememberSheets(false);
+    setSaveSuccess(false);
+  };
+
+  const handleOpenFolder = async () => {
+    setOpeningFolder(true);
+    try {
+      await openDownloadsFolder();
+    } catch {}
+    finally { setOpeningFolder(false); }
+  };
+
+  const savedAt = savedSheets.savedAt
+    ? new Date(savedSheets.savedAt).toLocaleString()
+    : null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex justify-end animate-fade-in">
@@ -57,12 +112,20 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
         {/* Settings Sections */}
         <div className="py-6 space-y-6 flex-1">
-          {/* Multi Google Sheet Links (Zero GCP) */}
+
+          {/* ── Google Sheets ── */}
           <div className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <Link2 className="w-4 h-4 text-emerald-400" />
-              Connect 2 Google Spreadsheets (Zero Cloud)
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-emerald-400" />
+                Connect Google Spreadsheets
+              </h3>
+              {hasSaved && (
+                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30">
+                  <BookmarkCheck className="w-3 h-3" /> Saved
+                </span>
+              )}
+            </div>
 
             <form onSubmit={handleConnectSheets} className="p-4 rounded-xl bg-dark-850 border border-dark-700/80 space-y-4">
               {/* Sheet 1 */}
@@ -85,7 +148,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   placeholder="https://docs.google.com/spreadsheets/d/.../edit"
                   value={sheet1Url}
                   onChange={(e) => setSheet1Url(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg bg-dark-950 border border-dark-700 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-500"
+                  className="w-full px-3 py-2 text-xs rounded-lg bg-dark-950 border border-dark-700 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-500 font-mono"
                 />
               </div>
 
@@ -106,13 +169,14 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 </div>
                 <input
                   type="text"
-                  placeholder="https://docs.google.com/spreadsheets/d/.../edit"
+                  placeholder="https://docs.google.com/spreadsheets/d/.../edit (optional)"
                   value={sheet2Url}
                   onChange={(e) => setSheet2Url(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg bg-dark-950 border border-dark-700 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-500"
+                  className="w-full px-3 py-2 text-xs rounded-lg bg-dark-950 border border-dark-700 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-500 font-mono"
                 />
               </div>
 
+              {/* Zero Cloud info */}
               <div className="text-[11px] text-slate-400 bg-dark-900/90 p-2.5 rounded-lg border border-dark-800 space-y-1">
                 <div className="font-semibold text-emerald-400 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Zero Cloud Setup
@@ -120,18 +184,73 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 <div>In Google Sheets: Click <strong>Share</strong> → set to <strong>"Anyone with the link can view"</strong>, then paste the link(s) above.</div>
               </div>
 
+              {/* Remember toggle */}
+              <label className="flex items-center gap-3 p-3 rounded-lg bg-dark-900/80 border border-dark-750 cursor-pointer hover:border-brand-500/40 transition">
+                <div className="relative flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={rememberSheets}
+                    onChange={(e) => setRememberSheets(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-dark-700 rounded-full peer peer-checked:bg-brand-600 transition-colors duration-200" />
+                  <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 peer-checked:translate-x-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                    <Save className="w-3 h-3 text-brand-400" />
+                    Remember my Google Sheet links
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    Saved locally in your browser — no data leaves your machine
+                  </div>
+                </div>
+              </label>
+
+              {/* Saved info + clear */}
+              {hasSaved && savedAt && (
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25">
+                  <div className="text-[10px] text-emerald-400 flex items-center gap-1.5">
+                    <BookmarkCheck className="w-3 h-3" />
+                    Last saved: {savedAt}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearSaved}
+                    className="flex items-center gap-1 text-[10px] font-semibold text-rose-400 hover:text-rose-300 transition"
+                  >
+                    <Trash2 className="w-3 h-3" /> Clear Saved
+                  </button>
+                </div>
+              )}
+
+              {/* Submit */}
               <button
                 type="submit"
                 disabled={isRefreshing}
                 className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-bold text-white transition shadow-md shadow-emerald-900/30"
               >
-                <RefreshCw className={'w-3.5 h-3.5 ' + (isRefreshing ? 'animate-spin' : '')} />
-                <span>{isRefreshing ? 'Syncing Spreadsheets...' : 'Sync & Load Google Sheets'}</span>
+                {saveSuccess ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Saved & Loaded!</span>
+                  </>
+                ) : isRefreshing ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Syncing Spreadsheets...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>{rememberSheets ? 'Save & Load Google Sheets' : 'Sync & Load Google Sheets'}</span>
+                  </>
+                )}
               </button>
             </form>
           </div>
 
-          {/* Current Source Stats */}
+          {/* ── Spreadsheet Status ── */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
               <FileSpreadsheet className="w-4 h-4 text-brand-400" />
@@ -190,7 +309,35 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             </div>
           </div>
 
-          {/* Browser Automation Options */}
+          {/* ── File Downloads ── */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+              <Download className="w-4 h-4 text-accent-cyan" />
+              File Downloads
+            </h3>
+            <div className="p-4 rounded-xl bg-dark-850 border border-dark-700/80 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-white">Auto-Save Downloads</div>
+                  <div className="text-xs text-slate-400 mt-0.5 font-mono truncate max-w-[220px]">
+                    {stats?.downloadsPath || 'Downloads folder'}
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-emerald-500/20 text-emerald-400">Active</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenFolder}
+                disabled={openingFolder}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-dark-800 hover:bg-dark-750 border border-dark-700 hover:border-accent-cyan/40 text-xs font-semibold text-slate-300 hover:text-accent-cyan transition disabled:opacity-50"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                {openingFolder ? 'Opening...' : 'Open Downloads Folder'}
+              </button>
+            </div>
+          </div>
+
+          {/* ── Browser Automation ── */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
               <Monitor className="w-4 h-4 text-accent-cyan" />
@@ -210,7 +357,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     onChange={(e) => onToggleKeepBrowserOpen(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+                  <div className="w-11 h-6 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600" />
                 </label>
               </div>
 

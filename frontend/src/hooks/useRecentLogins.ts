@@ -22,12 +22,12 @@ export function useRecentLogins() {
     }
   }, [recents]);
 
-  const addRecent = (company: string, game: string) => {
+  const addRecent = (company: string, game: string, sheetSource?: string) => {
     const id = (company.toLowerCase() + '_' + game.toLowerCase());
     setRecents((prev) => {
       const filtered = prev.filter((item) => item.id !== id);
       return [
-        { id, company, game, timestamp: Date.now() },
+        { id, company, game, sheetSource, timestamp: Date.now() },
         ...filtered
       ].slice(0, MAX_RECENTS);
     });

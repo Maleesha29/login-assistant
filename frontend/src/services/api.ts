@@ -125,3 +125,16 @@ export async function triggerLoginAutomation(
     }
   }
 }
+
+export async function fetchDownloads(): Promise<{ success: boolean; downloadsPath: string; recentDownloads: any[] }> {
+  const res = await fetch(API_BASE + '/downloads');
+  if (!res.ok) throw new Error('Failed to fetch downloads');
+  return res.json();
+}
+
+export async function openDownloadsFolder(): Promise<{ success: boolean; folder: string }> {
+  const res = await fetch(API_BASE + '/downloads/open-folder', { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to open downloads folder');
+  return res.json();
+}
+

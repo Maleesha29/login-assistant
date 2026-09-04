@@ -67,7 +67,7 @@ npm run dev
 ```
 
 - Frontend UI: `http://localhost:5173`
-- Backend API: `http://localhost:3001`
+- Backend API: `http://localhost:5000`
 
 ---
 
