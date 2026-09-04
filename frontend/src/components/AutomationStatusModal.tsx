@@ -39,6 +39,28 @@ export const AutomationStatusModal: React.FC<AutomationStatusModalProps> = ({
   const isDone = currentEvent?.step === 'LOGIN_COMPLETED';
   const progressPercent = currentEvent?.progressPercent || 0;
 
+  const [countdown, setCountdown] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (isDone) {
+      setCountdown(2);
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(timer);
+            onClose();
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    } else {
+      setCountdown(null);
+    }
+  }, [isDone, onClose]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="w-full max-w-xl bg-dark-900 border border-dark-700/90 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -165,13 +187,17 @@ export const AutomationStatusModal: React.FC<AutomationStatusModalProps> = ({
 
         <div className="px-6 py-4 bg-dark-850 border-t border-dark-700/80 flex items-center justify-between">
           <span className="text-xs text-slate-400">
-            {isDone ? 'Browser is open on your desktop' : 'Automated with Playwright'}
+            {isDone
+              ? countdown !== null
+                ? `Auto-closing in ${countdown}s...`
+                : 'Closing dialog...'
+              : 'Automated with Playwright'}
           </span>
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg bg-dark-700 hover:bg-dark-600 text-slate-200 text-xs font-semibold transition"
           >
-            {isDone || isError ? 'Close' : 'Hide Dialog'}
+            {isDone ? `Close (${countdown ?? 2}s)` : isError ? 'Close' : 'Hide Dialog'}
           </button>
         </div>
       </div>

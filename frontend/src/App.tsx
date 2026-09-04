@@ -9,6 +9,7 @@ import { SettingsDrawer } from './components/SettingsDrawer';
 import { SheetDataBrowser } from './components/SheetDataBrowser';
 import { useRecentLogins } from './hooks/useRecentLogins';
 import { useFavorites } from './hooks/useFavorites';
+import { useSavedSheets } from './hooks/useSavedSheets';
 import {
   fetchStatus,
   searchAccounts,
@@ -32,6 +33,7 @@ export function App() {
 
   const [stats, setStats] = useState<BackendStats | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isSyncSuccess, setIsSyncSuccess] = useState<boolean>(false);
   const [keepBrowserOpen, setKeepBrowserOpen] = useState<boolean>(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isBrowserOpen, setIsBrowserOpen] = useState<boolean>(false);
@@ -42,7 +44,8 @@ export function App() {
   const [eventHistory, setEventHistory] = useState<AutomationProgressEvent[]>([]);
 
   const { recents, addRecent, clearRecents } = useRecentLogins();
-  const { favorites, toggleFavorite, isFavorite } = useFavorites();
+  const { favorites, toggleFavorite, isFavorite, removeFavorite, clearFavorites } = useFavorites();
+  const { savedSheets } = useSavedSheets();
 
   useEffect(() => {
     loadStatus();
@@ -165,10 +168,13 @@ export function App() {
   const handleManualRefresh = async (params?: any) => {
     setIsRefreshing(true);
     try {
-      const res = await refreshSheetData(params);
+      const payload = params || (savedSheets.sheet1Url || savedSheets.sheet2Url ? savedSheets : undefined);
+      const res = await refreshSheetData(payload);
       setStats(res.stats);
+      setIsSyncSuccess(true);
+      setTimeout(() => setIsSyncSuccess(false), 3000);
     } catch (e: any) {
-      alert(e.message || 'Failed to refresh Google Sheet data');
+      alert(e.message || 'Failed to sync with Google Sheets');
     } finally {
       setIsRefreshing(false);
     }
@@ -180,6 +186,7 @@ export function App() {
         stats={stats}
         onRefresh={() => handleManualRefresh()}
         isRefreshing={isRefreshing}
+        isSyncSuccess={isSyncSuccess}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenBrowser={() => setIsBrowserOpen(true)}
       />
@@ -217,6 +224,7 @@ export function App() {
               isFavorite={isFavorite(selectedAccount.company, selectedAccount.game)}
               onToggleFavorite={() => toggleFavorite(selectedAccount.company, selectedAccount.game)}
               isLoggingIn={isAutomating}
+              onSelectFallback={(comp, gm) => handleSelectSaved(comp, gm)}
             />
           </div>
         )}
@@ -225,6 +233,8 @@ export function App() {
           <FavoritesList
             favorites={favorites}
             onSelect={handleSelectSaved}
+            onRemove={removeFavorite}
+            onClear={clearFavorites}
           />
 
           <RecentLogins

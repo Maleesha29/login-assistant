@@ -5,7 +5,7 @@ import { SavedItem } from '../types';
 interface FavoritesListProps {
   favorites: SavedItem[];
   onSelect: (company: string, game: string, sheetSource?: string) => void;
-  onRemove: (id: string) => void;
+  onRemove: (idOrCompany: string, game?: string) => void;
   onClear?: () => void;
 }
 
@@ -82,7 +82,7 @@ export const FavoritesList: React.FC<FavoritesListProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onRemove(item.id);
+                    onRemove(item.company, item.game);
                   }}
                   className="w-7 h-7 rounded-lg bg-dark-800/80 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 flex items-center justify-center transition border border-transparent hover:border-rose-500/30"
                   title="Remove from favorites"

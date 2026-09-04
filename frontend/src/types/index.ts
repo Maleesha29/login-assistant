@@ -23,6 +23,7 @@ export interface AccountPreview {
   hasPassword: boolean;
   password?: string;
   sheetSource?: string;
+  fallbacks?: Array<{ game: string; url: string }>;
 }
 
 export type AutomationStep =
